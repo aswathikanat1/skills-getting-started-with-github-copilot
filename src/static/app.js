@@ -20,12 +20,52 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const spotsLeft = details.max_participants - details.participants.length;
 
+        // Basic card content plus a placeholder for participants
         activityCard.innerHTML = `
           <h4>${name}</h4>
           <p>${details.description}</p>
           <p><strong>Schedule:</strong> ${details.schedule}</p>
           <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
+          <div class="participants"></div>
         `;
+
+        // After inserting the HTML, populate the participants area safely using DOM APIs
+        const participantsDiv = activityCard.querySelector(".participants");
+        const participantsArr = Array.isArray(details.participants) ? details.participants : [];
+
+        const heading = document.createElement("h5");
+        heading.textContent = `Participants (${participantsArr.length})`;
+        participantsDiv.appendChild(heading);
+
+        if (participantsArr.length > 0) {
+          const ul = document.createElement("ul");
+          ul.className = "participants-list";
+
+          participantsArr.forEach((p) => {
+            const li = document.createElement("li");
+            li.className = "participant-item";
+
+            const avatar = document.createElement("span");
+            avatar.className = "avatar";
+            const initial = (p && p.trim() && p.trim()[0]) ? p.trim()[0].toUpperCase() : "?";
+            avatar.textContent = initial;
+
+            const emailSpan = document.createElement("span");
+            emailSpan.className = "participant-email";
+            emailSpan.textContent = p;
+
+            li.appendChild(avatar);
+            li.appendChild(emailSpan);
+            ul.appendChild(li);
+          });
+
+          participantsDiv.appendChild(ul);
+        } else {
+          const noP = document.createElement("p");
+          noP.className = "no-participants";
+          noP.textContent = "No participants yet";
+          participantsDiv.appendChild(noP);
+        }
 
         activitiesList.appendChild(activityCard);
 
