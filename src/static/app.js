@@ -12,6 +12,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Clear loading message
       activitiesList.innerHTML = "";
+      // Reset activity select to the placeholder to avoid duplicated options
+      activitySelect.innerHTML = '<option value="">-- Select an activity --</option>';
 
       // Populate activities list
       Object.entries(activities).forEach(([name, details]) => {
@@ -20,12 +22,81 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const spotsLeft = details.max_participants - details.participants.length;
 
+        // Basic card content plus a placeholder for participants
         activityCard.innerHTML = `
           <h4>${name}</h4>
           <p>${details.description}</p>
           <p><strong>Schedule:</strong> ${details.schedule}</p>
           <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
+          <div class="participants"></div>
         `;
+
+        // After inserting the HTML, populate the participants area safely using DOM APIs
+        const participantsDiv = activityCard.querySelector(".participants");
+        const participantsArr = Array.isArray(details.participants) ? details.participants : [];
+
+        const heading = document.createElement("h5");
+        heading.textContent = `Participants (${participantsArr.length})`;
+        participantsDiv.appendChild(heading);
+
+        if (participantsArr.length > 0) {
+          const ul = document.createElement("ul");
+          ul.className = "participants-list";
+
+          participantsArr.forEach((p) => {
+            const li = document.createElement("li");
+            li.className = "participant-item";
+
+            const avatar = document.createElement("span");
+            avatar.className = "avatar";
+            const initial = (p && p.trim() && p.trim()[0]) ? p.trim()[0].toUpperCase() : "?";
+            avatar.textContent = initial;
+
+            const emailSpan = document.createElement("span");
+            emailSpan.className = "participant-email";
+            emailSpan.textContent = p;
+
+            // Delete button for unregistering participant
+            const delBtn = document.createElement("button");
+            delBtn.className = "delete-btn";
+            delBtn.type = "button";
+            delBtn.title = "Unregister participant";
+            delBtn.textContent = "🗑️";
+
+            delBtn.addEventListener("click", async () => {
+              // Call API to unregister and refresh the activities list on success
+              try {
+                const resp = await fetch(
+                  `/activities/${encodeURIComponent(name)}/participants?email=${encodeURIComponent(p)}`,
+                  { method: "DELETE" }
+                );
+
+                const resJson = await resp.json();
+
+                if (resp.ok) {
+                  // reload activities to update UI
+                  await fetchActivities();
+                } else {
+                  console.error("Failed to unregister:", resJson);
+                }
+              } catch (err) {
+                console.error("Error unregistering participant:", err);
+              }
+            });
+
+            li.appendChild(avatar);
+            li.appendChild(emailSpan);
+            li.appendChild(delBtn);
+            ul.appendChild(li);
+          });
+
+          participantsDiv.appendChild(ul);
+        } else {
+          const noP = document.createElement("p");
+          noP.className = "no-participants";
+          noP.textContent = "No participants yet";
+          participantsDiv.appendChild(noP);
+        }
 
         activitiesList.appendChild(activityCard);
 
@@ -62,6 +133,8 @@ document.addEventListener("DOMContentLoaded", () => {
         messageDiv.textContent = result.message;
         messageDiv.className = "success";
         signupForm.reset();
+        // Refresh activities so the newly registered participant appears immediately
+        await fetchActivities();
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
         messageDiv.className = "error";
